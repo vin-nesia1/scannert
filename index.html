@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Lengkap - Multi-Purpose Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .scanner-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .scanner-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .scanner-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .scanner-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .scanner-icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background-color: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background-color: #f0f4ff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .results h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .result-item {
+            background: #f8f9ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .progress {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .camera-preview {
+            width: 100%;
+            max-width: 300px;
+            height: 200px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #c62828;
+        }
+
+        .success {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .metadata-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .metadata-table th,
+        .metadata-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .metadata-table th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .scanner-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Scanner Lengkap</h1>
+            <p>Scanner multi-fungsi untuk dokumen, QR code, barcode, dan analisis file</p>
+        </div>
+
+        <div class="scanner-grid">
+            <!-- OCR Scanner -->
+            <div class="scanner-card">
+                <h3>
+                    <svg class="scanner-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V18H11V8H9M13,8V18H15V8H13Z"/>
+                    </svg>
+                    OCR Text Scanner
+                </h3>
+                <div class="upload-area" onclick="document.getElementById('ocrInput').click()">
+                    <p>📄 Klik atau drag gambar/PDF untuk ekstrak teks</p>
+                    <input type="file" id="ocrInput" class="file-input" accept="image/*,.pdf" multiple>
+                </div>
+                <button class="btn" id="startOCR" disabled>Mulai OCR</button>
+                <div class="progress" id="ocrProgress" style="display:none;">
+                    <div class="progress-bar" id="ocrProgressBar"></div>
+                </div>
+                <div id="ocrResults"></div>
+            </div>
+
+            <!-- QR/Barcode Scanner -->
+            <div class="scanner-card">
+                <h3>
+                    <svg class="scanner-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3,11H5V13H3V11M11,5H13V9H11V5M9,11H13V15H9V11M15,11H17V13H15V11M19,5H21V9H19V5M5,5H9V9H5V5M3,19H5V21H3V19M5,19H9V21H5V19M3,5H5V9H3V5"/>
+                    </svg>
+                    QR & Barcode Scanner
+                </h3>
+                <div class="upload-area" onclick="document.getElementById('qrInput').click()">
+                    <p>📱 Upload gambar dengan QR/Barcode</p>
+                    <input type="file" id="qrInput" class="file-input" accept="image/*">
+                </div>
+                <button class="btn" id="startCamera">📹 Buka Kamera</button>
+                <button class="btn" id="scanQR" disabled>Scan QR/Barcode</button>
+                <video class="camera-preview" id="cameraPreview" style="display:none;"></video>
+                <canvas id="qrCanvas" style="display:none;"></canvas>
+                <div id="qrResults"></div>
+            </div>
+
+            <!-- File Analyzer -->
+            <div class="scanner-card">
+                <h3>
+                    <svg class="scanner-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                    </svg>
+                    File Analyzer
+                </h3>
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <p>📁 Upload file untuk analisis metadata</p>
+                    <input type="file" id="fileInput" class="file-input" accept="*/*" multiple>
+                </div>
+                <button class="btn" id="analyzeFile" disabled>Analisis File</button>
+                <div id="fileResults"></div>
+            </div>
+
+            <!-- Hash Generator -->
+            <div class="scanner-card">
+                <h3>
+                    <svg class="scanner-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9,7H11L12,2H10L9,7M13,2H15L14,7H12L13,2M8,8H16L15,13H9L8,8M7,14H15L14,19H8L7,14M5,20H13L12,15H10L5,20Z"/>
+                    </svg>
+                    Hash Generator
+                </h3>
+                <div class="upload-area" onclick="document.getElementById('hashInput').click()">
+                    <p>🔐 Generate hash (MD5, SHA) dari file</p>
+                    <input type="file" id="hashInput" class="file-input" accept="*/*">
+                </div>
+                <button class="btn" id="generateHash" disabled>Generate Hash</button>
+                <div id="hashResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let selectedFiles = {};
+        let cameraStream = null;
+
+        // Utility functions
+        function showError(containerId, message) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="error">❌ ${message}</div>`;
+        }
+
+        function showSuccess(containerId, message) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="success">✅ ${message}</div>`;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // OCR Scanner
+        document.getElementById('ocrInput').addEventListener('change', function(e) {
+            selectedFiles.ocr = Array.from(e.target.files);
+            document.getElementById('startOCR').disabled = false;
+            document.getElementById('ocrResults').innerHTML = `<p>${selectedFiles.ocr.length} file(s) dipilih</p>`;
+        });
+
+        document.getElementById('startOCR').addEventListener('click', async function() {
+            if (!selectedFiles.ocr || selectedFiles.ocr.length === 0) return;
+
+            const progressContainer = document.getElementById('ocrProgress');
+            const progressBar = document.getElementById('ocrProgressBar');
+            const resultsContainer = document.getElementById('ocrResults');
+            
+            progressContainer.style.display = 'block';
+            resultsContainer.innerHTML = '';
+            this.disabled = true;
+
+            try {
+                for (let i = 0; i < selectedFiles.ocr.length; i++) {
+                    const file = selectedFiles.ocr[i];
+                    progressBar.style.width = `${((i + 1) / selectedFiles.ocr.length) * 100}%`;
+                    
+                    const result = await Tesseract.recognize(file, 'ind+eng', {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                progressBar.style.width = `${(i / selectedFiles.ocr.length + m.progress / selectedFiles.ocr.length) * 100}%`;
+                            }
+                        }
+                    });
+
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'results';
+                    resultDiv.innerHTML = `
+                        <h4>📄 ${file.name}</h4>
+                        <div class="result-item">
+                            <strong>Teks yang ditemukan:</strong><br>
+                            <textarea rows="6" style="width:100%; margin-top:10px; padding:10px; border:1px solid #ddd; border-radius:5px;">${result.data.text}</textarea>
+                        </div>
+                        <div class="result-item">
+                            <strong>Confidence:</strong> ${(result.data.confidence).toFixed(2)}%
+                        </div>
+                    `;
+                    resultsContainer.appendChild(resultDiv);
+                }
+                
+                progressContainer.style.display = 'none';
+                showSuccess('ocrResults', 'OCR selesai untuk semua file!');
+            } catch (error) {
+                showError('ocrResults', 'Error saat melakukan OCR: ' + error.message);
+                progressContainer.style.display = 'none';
+            }
+            
+            this.disabled = false;
+        });
+
+        // QR/Barcode Scanner
+        document.getElementById('qrInput').addEventListener('change', function(e) {
+            selectedFiles.qr = e.target.files[0];
+            document.getElementById('scanQR').disabled = false;
+        });
+
+        document.getElementById('startCamera').addEventListener('click', async function() {
+            const video = document.getElementById('cameraPreview');
+            
+            try {
+                if (cameraStream) {
+                    // Stop camera
+                    cameraStream.getTracks().forEach(track => track.stop());
+                    cameraStream = null;
+                    video.style.display = 'none';
+                    this.textContent = '📹 Buka Kamera';
+                    return;
+                }
+
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = cameraStream;
+                video.style.display = 'block';
+                video.play();
+                this.textContent = '⏹️ Tutup Kamera';
+
+                // Auto scan QR from camera
+                const canvas = document.getElementById('qrCanvas');
+                const context = canvas.getContext('2d');
+                
+                const scanFrame = () => {
+                    if (video.videoWidth && video.videoHeight) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        context.drawImage(video, 0, 0);
+                        
+                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, canvas.width, canvas.height);
+                        
+                        if (code) {
+                            document.getElementById('qrResults').innerHTML = `
+                                <div class="results">
+                                    <h4>🎯 QR Code Detected!</h4>
+                                    <div class="result-item">
+                                        <strong>Data:</strong> ${code.data}
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>Format:</strong> QR Code
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    if (cameraStream && cameraStream.active) {
+                        requestAnimationFrame(scanFrame);
+                    }
+                };
+                
+                video.addEventListener('loadedmetadata', scanFrame);
+                
+            } catch (error) {
+                showError('qrResults', 'Tidak dapat mengakses kamera: ' + error.message);
+            }
+        });
+
+        document.getElementById('scanQR').addEventListener('click', async function() {
+            if (!selectedFiles.qr) return;
+
+            const resultsContainer = document.getElementById('qrResults');
+            this.disabled = true;
+
+            try {
+                const canvas = document.getElementById('qrCanvas');
+                const context = canvas.getContext('2d');
+                const img = new Image();
+
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    context.drawImage(img, 0, 0);
+                    
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, canvas.width, canvas.height);
+                    
+                    if (code) {
+                        resultsContainer.innerHTML = `
+                            <div class="results">
+                                <h4>🎯 Code Detected!</h4>
+                                <div class="result-item">
+                                    <strong>Data:</strong> ${code.data}
+                                </div>
+                                <div class="result-item">
+                                    <strong>Format:</strong> ${code.format || 'QR Code'}
+                                </div>
+                                <div class="result-item">
+                                    <strong>Location:</strong> 
+                                    Top-left: (${code.location.topLeftCorner.x}, ${code.location.topLeftCorner.y})<br>
+                                    Bottom-right: (${code.location.bottomRightCorner.x}, ${code.location.bottomRightCorner.y})
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        showError('qrResults', 'Tidak ditemukan QR/Barcode pada gambar');
+                    }
+                    
+                    document.getElementById('scanQR').disabled = false;
+                };
+
+                img.src = URL.createObjectURL(selectedFiles.qr);
+            } catch (error) {
+                showError('qrResults', 'Error scanning: ' + error.message);
+                this.disabled = false;
+            }
+        });
+
+        // File Analyzer
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            selectedFiles.analyze = Array.from(e.target.files);
+            document.getElementById('analyzeFile').disabled = false;
+        });
+
+        document.getElementById('analyzeFile').addEventListener('click', function() {
+            if (!selectedFiles.analyze || selectedFiles.analyze.length === 0) return;
+
+            const resultsContainer = document.getElementById('fileResults');
+            resultsContainer.innerHTML = '';
+
+            selectedFiles.analyze.forEach(file => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'results';
+                
+                const lastModified = new Date(file.lastModified).toLocaleString('id-ID');
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                
+                let fileTypeInfo = 'Unknown';
+                if (file.type.startsWith('image/')) fileTypeInfo = 'Image File';
+                else if (file.type.startsWith('video/')) fileTypeInfo = 'Video File';
+                else if (file.type.startsWith('audio/')) fileTypeInfo = 'Audio File';
+                else if (file.type.includes('pdf')) fileTypeInfo = 'PDF Document';
+                else if (file.type.includes('text')) fileTypeInfo = 'Text File';
+                else if (file.type.includes('zip')) fileTypeInfo = 'Archive File';
+
+                resultDiv.innerHTML = `
+                    <h4>📋 ${file.name}</h4>
+                    <table class="metadata-table">
+                        <tr><th>Property</th><th>Value</th></tr>
+                        <tr><td>File Size</td><td>${formatBytes(file.size)}</td></tr>
+                        <tr><td>MIME Type</td><td>${file.type || 'unknown'}</td></tr>
+                        <tr><td>File Type</td><td>${fileTypeInfo}</td></tr>
+                        <tr><td>Extension</td><td>.${fileExtension}</td></tr>
+                        <tr><td>Last Modified</td><td>${lastModified}</td></tr>
+                        <tr><td>File Path</td><td>${file.webkitRelativePath || 'N/A'}</td></tr>
+                    </table>
+                `;
+                
+                // Additional analysis for images
+                if (file.type.startsWith('image/')) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const additionalInfo = `
+                            <tr><td>Dimensions</td><td>${img.width} × ${img.height} pixels</td></tr>
+                            <tr><td>Aspect Ratio</td><td>${(img.width/img.height).toFixed(2)}:1</td></tr>
+                        `;
+                        const tbody = resultDiv.querySelector('table tbody') || resultDiv.querySelector('table');
+                        tbody.innerHTML += additionalInfo;
+                        URL.revokeObjectURL(img.src);
+                    };
+                    img.src = URL.createObjectURL(file);
+                }
+                
+                resultsContainer.appendChild(resultDiv);
+            });
+        });
+
+        // Hash Generator
+        document.getElementById('hashInput').addEventListener('change', function(e) {
+            selectedFiles.hash = e.target.files[0];
+            document.getElementById('generateHash').disabled = false;
+        });
+
+        document.getElementById('generateHash').addEventListener('click', async function() {
+            if (!selectedFiles.hash) return;
+
+            const resultsContainer = document.getElementById('hashResults');
+            this.disabled = true;
+
+            try {
+                const arrayBuffer = await selectedFiles.hash.arrayBuffer();
+                
+                // Generate MD5-like hash (simplified)
+                const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+                const sha256 = Array.from(new Uint8Array(hashBuffer))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+
+                const sha1Buffer = await crypto.subtle.digest('SHA-1', arrayBuffer);
+                const sha1 = Array.from(new Uint8Array(sha1Buffer))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+
+                resultsContainer.innerHTML = `
+                    <div class="results">
+                        <h4>🔐 Hash Values - ${selectedFiles.hash.name}</h4>
+                        <div class="result-item">
+                            <strong>SHA-256:</strong><br>
+                            <input type="text" value="${sha256}" readonly style="width:100%; font-family:monospace; padding:5px; margin-top:5px;">
+                        </div>
+                        <div class="result-item">
+                            <strong>SHA-1:</strong><br>
+                            <input type="text" value="${sha1}" readonly style="width:100%; font-family:monospace; padding:5px; margin-top:5px;">
+                        </div>
+                        <div class="result-item">
+                            <strong>File Size:</strong> ${formatBytes(selectedFiles.hash.size)}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                showError('hashResults', 'Error generating hash: ' + error.message);
+            }
+
+            this.disabled = false;
+        });
+
+        // Drag and drop functionality
+        function setupDragAndDrop(uploadArea, inputId, fileType) {
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                const input = document.getElementById(inputId);
+                input.files = files;
+                input.dispatchEvent(new Event('change'));
+            });
+        }
+
+        // Setup drag and drop for all upload areas
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadAreas = document.querySelectorAll('.upload-area');
+            uploadAreas.forEach(area => {
+                const input = area.querySelector('input[type="file"]');
+                if (input) {
+                    setupDragAndDrop(area, input.id, input.accept);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
